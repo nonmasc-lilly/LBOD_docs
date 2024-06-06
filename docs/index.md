@@ -414,13 +414,450 @@ statement = forever / loop / compare / match / call / continue / break / return 
         / save / interrupt
 ```
 
+## Forever loop
+
+It is at times, helpful to loop over something for a theoretically indefinite amount of
+time, think a mainloop in which we take user input in order to pass it to a shell function.
+
+The syntax is as follows:
+
+```ABNF
+forever = "forever" FSP "(" FSP *(statement / asm / FSP) ")"
+```
+
+the aASM is as so (consider `forever (<a>)`):
+
+```aASM
+@.F<integer>
+<a>
+goto @.F<integer>
+@.EF<integer>
+```
+
+`<integer>` is simply a number appended to the end of the labels in order to differentiate the
+different forever loops.
+
+## Loop
+
+While forever loops are useful, it is easy to imagine a situation in which we would want to exit
+a loop conditionally. This is easily done with loop statements. A loop statement takes as an
+argument a conditional statement (of the form `<a> <condition operation> <b>`) which the loop
+will use to decide whether or not to terminate. The loop will run until the condition evaluates
+false.
+
+```ABNF
+loop = "loop" FSP (register / memory) (("=" / "equal to") / ("<" / "lesser than") / (">" / "greater than")) (register / memory / ilit / iden) FSP "("
+        FSP *(statement / asm / FSP) ")"
+```
+
+The aASM (for '=' case) is the following (consider `loop <a> = <b> ( <c> )`)
+
+```aASM
+@.L<integer>
+<c>
+cmp <a> <b>
+goto !?zero @.L<integer>
+@.EL<integer>
+```
+
+The aASM (for '>' case) is the following (consider `loop <a> = <b> ( <c> )`)
+
+```aASM
+@.L<integer>
+<c>
+cmp <a> <b>
+goto !?greater @.L<integer>
+@.EL<integer>
+```
 
 
+The aASM (for '<' case) is the following (consider `loop <a> = <b> ( <c> )`)
 
+```aASM
+@.L<integer>
+<c>
+cmp <a> <b>
+goto !?lesser @.L<integer>
+@.EL<integer>
+```
 
+## Registers and Memory
 
+I feel now that it has become relevant enough to define registers and memory. A register is
+analagous to those in assembly, volatile single values. There are the following registers
+available to the LBOD programmer:
 
+```
+i===================================i
+| IDEN | SIZE    | PURPOSE          |
+#-----------------------------------#
+| ax   | 2 bytes | general purpose  |
+| al   | 1 byte  | general purpose  |
+| ah   | 1 byte  | general purpose  |
+| bx   | 2 bytes | general purpose  |
+| bl   | 1 byte  | general purpose  |
+| bh   | 1 byte  | general purpose  |
+| cx   | 2 bytes | general purpose  |
+| cl   | 1 byte  | general purpose  |
+| ch   | 1 byte  | general purpose  |
+| dx   | 2 bytes | general purpose  |
+| dl   | 1 byte  | general purpose  |
+| dh   | 1 byte  | general purpose  |
+| si   | 2 bytes | string register  |
+| di   | 2 bytes | pointer register |
+| bp   | 2 bytes | pointer register |
+l===================================l
+```
 
+Memory is also simple, it is simply here a dereferenced pointer with the following ABNF:
 
+```ABNF
+"[" register / iden "]"
+```
 
+## Compare statements
+
+It is also clearly useful to do something conditional only once, and thusly compare statements
+have been made.
+
+```ABNF
+compare = ("compare" / "?") FSP (register / memory) (("=" / "equal to") / ("<" / "lesser than") / (">" / "greater than"))
+        (register / memory / ilit / iden) FSP "(" FSP *(statement / asm / FSP) ")"
+```
+
+The aASM (for '=' case) is the following (consider `compare <a> = <b> ( <c> )`)
+
+```aASM
+@.I<integer>
+cmp <a> <b>
+goto !?zero @.EI<integer>
+<c>
+@.EI<integer>
+```
+
+The aASM (for '>' case) is the following (consider `compare <a> = <b> ( <c> )`)
+
+```aASM
+@.I<integer>
+cmp <a> <b>
+goto !?greater @.EI<integer>
+<c>
+@.EI<integer>
+```
+
+The aASM (for '<' case) is the following (consider `compare <a> = <b> ( <c> )`)
+
+```aASM
+@.I<integer>
+cmp <a> <b>
+goto !?lesser @.EI<integer>
+<c>
+@.EI<integer>
+```
+
+## Match statements
+
+A match statement is a compact way of writing compare equal statements. If for example
+you need to check what character a user has inputted before printing out it as well as
+extra characters (say for transforming LF and CR to CRLF).
+
+```ABNF
+match = "match" FSP (register / memory) FSP "(" FSP
+        ((register / memory / ilit) FSP ":" *(statement / asm) ";") ")"
+```
+
+(consider:
+
+```
+match <a> (
+    <b> : <c> ;
+    <d> : <e> ;
+)
+```
+)
+
+```ABNF
+@.M<integer>
+cmp <a> <b>
+goto !?zero .EM<integer>
+<c>
+@.EM<integer>
+@.M<integer+1>
+cmp <a> <d>
+goto !?zero .EM<integer+1>
+<e>
+@.EM<integer+1>
+```
+
+## Call statement
+
+What use are functions if we cannot call them? Not much is to be said about function calls,
+the ABNF and aASM (regarding `call <a> (*<c>)`) follows:
+
+```ABNF
+call = "call" FSP iden FSP "(" FSP *(register / memory / iden / FSP) ")"
+```
+
+```aASM
+<for every c:>
+push <c>
+
+push <current address>
+goto <a>
+
+<for every c:>
+pop <c>
+```
+
+## Continue
+
+A continue statement simply jumps to the beginning of the current loop.
+
+ABNF:
+
+```ABNF
+continue = "continue"
+```
+
+aASM:
+
+```
+goto .<F / L><integer>
+```
+
+where `<F / L>` is simply whichever kind of loop is currently being ran.
+
+## Break
+
+A break statement is similar to a Continue statement but instead it jumps
+to the end
+
+ABNF:
+
+```ABNF
+break = "break"
+```
+
+aASM:
+
+```
+goto .E<F / L><integer>
+```
+
+where `<F / L>` is simply whichever kind of loop is currently being ran.
+
+## Return
+
+A return statement (assuming the stack is clean (all load/save statements in the current
+function are balanced)) will return execution to whichever function called the current one.
+
+ABNF:
+
+```ABNF
+return = "return"
+```
+
+aASM:
+
+```aASM
+pop $ia
+goto $ia
+```
+
+## Not
+
+Not is our first logical instruction. It takes the input value and flips each bit contained
+within to its logical opposite.
+
+```ABNF
+not = "not" / "~" (register / memory)
+```
+
+```aASM
+not <a>
+```
+
+## And
+
+And takes its input values and bitwise ands them, and then stores it in the first result.
+
+```ABNF
+and = "and" / "&" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+and <a> <b>
+```
+
+## Or
+
+Or takes its input values and bitwise ors them, and then stores it in the first result.
+
+```ABNF
+or = "or" / "|" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+or <a> <b>
+```
+
+## Xor
+
+And takes its input values and bitwise ands them, and then stores it in the first result.
+
+```ABNF
+xor = ("xor" / "^") (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+xor <a> <b>
+```
+
+## Add
+
+Add is our first arithmetic input takes its input values and adds them, and then stores it in the
+first result.
+
+```ABNF
+add = "add" / "+" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+add <a> <b>
+```
+
+## Subtract
+
+Subtract takes its input values and adds them, and then stores it in the first result.
+
+```ABNF
+add = "subtract" / "-" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+sub <a> <b>
+```
+
+## Multiply
+
+Multiply takes its input values and adds them, and then stores it in the first result.
+
+```ABNF
+mul = "multiply" / "*" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+mul <a> <b>
+```
+
+## Divide
+
+Divide takes its input values and adds them, and then stores it in the first result.
+
+```ABNF
+divide = "divide" / "/" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+div <a> <b>
+```
+
+## Negate
+
+Negate takes its input value and negates them (twos compliment) it,
+
+```ABNF
+neg = "negate" / "neg" (register / memory)
+```
+
+```aAsm
+not <a>
+add <a> 1
+```
+
+## Increment
+
+Increment takes its input value and negates them (twos compliment) it,
+
+```ABNF
+increment = "increment" / "inc" (register / memory)
+```
+
+```aAsm
+add <a> 1
+```
+
+## Move
+
+Move stores its second input in its first input
+
+```ABNF
+move = "move" / "=" (register / memory) (register / memory / iden / ilit)
+```
+
+```aAsm
+<a> = <b>
+```
+
+## Load
+
+Load pops from the stack and stores it to its arguments in reverse order (the order that
+would be passed into save should too be passed into load)
+
+its register inputs must only be a width of two bytes.
+
+```ABNF
+load = "load" FSP "(" FSP register FSP ")"
+```
+
+considering `load (*<c>)`
+
+```aASM
+<for each c starting with the final c>
+pop c
+```
+
+## Save
+
+Save pops from the stack and stores it to its arguments in forwards order (the order that
+would be passed into load should too be passed into load)
+
+its register inputs must only be a width of two bytes.
+
+```ABNF
+save = "save" FSP "(" FSP register FSP ")"
+```
+
+considering `save (*<c>)`
+
+```aASM
+<for each c>
+push c
+```
+
+## Interrupts
+
+Interrupts map directly to BIOS interrupt calls. See [Wikipedia](https://en.wikipedia.org/wiki/BIOS_interrupt_call).
+The following interrupts are allowed by LBOD:
+
+```
+i==================i
+| System     | int |
+#------------------#
+| sysvideo   | $10 |
+| sysequ     | $11 |
+| sysmemsiz  | $12 |
+| sysdisk    | $13 |
+| sysserial  | $14 |
+| sysmisc    | $15 |
+| syskb      | $16 |
+| sysprinter | $17 |
+| sysrtclk   | $1A |
+| syspci     | $1A |
+l==================l
+```
+
+```ABNF
+interrupt = "interrupt" / "int" ilit
+```
 
