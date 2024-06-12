@@ -789,7 +789,8 @@ add <a> 1
 
 ## Move
 
-Move stores its second input in its first input
+Move stores its second input in its first input, when the first input is a dereference
+it stores a single byte if the value is less than or equal to $FF and two if it is greater.
 
 ```ABNF
 move = "move" / "=" (register / memory) (register / memory / iden / ilit)
