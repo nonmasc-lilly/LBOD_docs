@@ -559,11 +559,13 @@ goto !?lesser @.EI<integer>
 
 A match statement is a compact way of writing compare equal statements. If for example
 you need to check what character a user has inputted before printing out it as well as
-extra characters (say for transforming LF and CR to CRLF).
+extra characters (say for transforming LF and CR to CRLF). If none of the conditions
+are met, then the default clause is run (if there is no default clause then nothing is
+run).
 
 ```ABNF
 match = "match" FSP (register / memory) FSP "(" FSP
-        ((register / memory / ilit) FSP ":" *(statement / asm) ";") ")"
+        ((register / memory / ilit / "default") FSP ":" *(statement / asm) ";") ")"
 ```
 
 (consider:
