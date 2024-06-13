@@ -389,6 +389,8 @@ What follows is a list of statements (and the corresponding ABNF)
 - continue
 - break
 - return
+- label
+- branch
 #### bitwise
 - not
 - and
@@ -864,3 +866,27 @@ l==================l
 interrupt = "interrupt" / "int" ilit
 ```
 
+## Labels
+
+A label is simply a place within a function that you can jump to using
+`branch`
+
+```ABNF
+label = ("label" / "lbl" / "@") iden ":"
+```
+
+```aASM
+label ._<iden>
+```
+
+## Branch
+
+A branch simply jumps execution to the specified label
+
+```ABNF
+branch = "branch" iden
+```
+
+```aASM
+goto ._<iden>
+```
