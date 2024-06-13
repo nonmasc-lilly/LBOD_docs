@@ -523,7 +523,7 @@ It is also clearly useful to do something conditional only once, and thusly comp
 have been made.
 
 ```ABNF
-compare = ("compare" / "?") FSP (register / memory) (("=" / "equal to") / ("<" / "lesser than") / (">" / "greater than"))
+compare = ("compare" / "?") FSP register (("=" / "equal to") / ("<" / "lesser than") / (">" / "greater than"))
         (register / memory / ilit / iden) FSP "(" FSP *(statement / asm / FSP) ")"
 ```
 
