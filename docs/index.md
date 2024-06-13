@@ -566,7 +566,7 @@ are met, then the default clause is run (if there is no default clause then noth
 run).
 
 ```ABNF
-match = "match" FSP (register / memory) FSP "(" FSP
+match = "match" FSP register FSP "(" FSP
         ((register / memory / ilit / "default") FSP ":" *(statement / asm) ";") ")"
 ```
 
